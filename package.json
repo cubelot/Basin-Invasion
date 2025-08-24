@@ -2,11 +2,11 @@
   "name": "monster_invasion",
   "version": "1.0.0",
   "description": "",
-  "main": "app.js",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "node app.js",
-    "start": "node app.js",
+    "dev": "node api/index.js",
+    "start": "node api/index.js",
     "build": ""
   },
   "author": "",
