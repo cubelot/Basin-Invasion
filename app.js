@@ -1,7 +1,7 @@
 
 //database and server stuff
-var mongojs = require("mongojs");
-var db = mongojs("127.0.0.1:27017/myGame", ["account","progress"]);
+// var mongojs = require("mongojs");
+// var db = mongojs("127.0.0.1:27017/myGame", ["account","progress"]);
 
 //db.account.insertOne({username:"b",password:"bb"});
 var express = require("express");
@@ -299,29 +299,32 @@ Bullet.update = function(){
 var DEBUG = false;
 
 var isValidPassword = function(data,cb){
-    db.account.find({username:data.username,password:data.password},function(err,res){
-        if(res.length > 0)
-            cb(true);
-        else
-            cb(false);
+    cb(true);
+    // db.account.find({username:data.username,password:data.password},function(err,res){
+    //     if(res.length > 0)
+    //         cb(true);
+    //     else
+    //         cb(false);
             
-    });
+    // });
 }
 
 
 var isUsernameTaken = function(data,cb){
-    db.account.find({username:data.username},function(err,res){
-        if(res.length > 0)
-            cb(true);
-        else
-            cb(false);
-    });
+    cb(false);
+    // db.account.find({username:data.username},function(err,res){
+    //     if(res.length > 0)
+    //         cb(true);
+    //     else
+    //         cb(false);
+    // });
 }
 
 var addUser = function(data,cb){
-    db.account.insert({username:data.username,password:data.password},function(err){
-        cb();
-    });
+    cb();
+    // db.account.insert({username:data.username,password:data.password},function(err){
+    //     cb();
+    // });
 }    
   
 var io = require("socket.io") (serv,{});
