@@ -1,0 +1,22 @@
+{
+    "boss":{},
+    "monster":{
+        "slime":{
+            "spdX":10,
+            "spdY":10,
+            "map":"beginnings",
+            "type":"monster",
+            "animations":["heal","move","idle"],
+            "animation":{
+                "heal":false,
+                "move":false,
+                "idle":true
+            },
+            "hp":5,
+            "hpMax":5,
+            "height":8,
+            "width":16,
+            "name":"Slime"
+        }
+    }
+}

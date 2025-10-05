@@ -1,6 +1,6 @@
-<script>
-    var Pack;
-</script>
+<head>
+    <link href="client/style.css" rel="stylesheet">
+</head>
 <div id="signDiv">
     Username: <input id="signDiv-username" type="text"></input><br>
     Password: <input id="signDiv-password" type="password"></input>
@@ -9,40 +9,43 @@
 </div>
 <div id="gameDiv" style="display:none;">
     <div id="game" style="position:absolute;width:500px;height:500px">
-        <canvas id="ctx" width="500" height="500" style="position:absolute;border:1px solid #000000;"></canvas>
-        <canvas id="ctx-ui" width="500" height="500" style="position:absolute;border:1px solid #000000;"></canvas>
+        <canvas id="ctx" width="500" height="500" style="position:absolute;border:0px solid #000000;"></canvas>
+        
 
-        <div id="ui" style="position:absolute;width:500px;height:500px;">
-            <button onclick="changeMap()" style="position:absolute;bottom:0px;left:0px">
+        <div id="ui">
+            <button id="changeMapButton" style="position:absolute;bottom:0px;left:0px">
                 Change Map
             </button>
         </div>
     </div>
 
-    <div id="belowGame" style="margin-top:520px">
-        <div id="chat-text" style="width:500px;height:100px;overflow-y:scroll">
+    <div id="belowGame" style="margin-top:120px">
+        <div id="chat-text" style="position:absolute;width:500px;height:100px;left:50%;bottom:20px;transform:translateX(-50%);overflow-y:scroll">
             <div>Hello!</div>
         </div>
-
+        <div id="inventory" style="position:absolute;z-index: index 1;"></div>
         <form id="chat-form">
-            <input id="chat-input" type="text" style=" width:500px"></input> 
+            <input id="chat-input" type="text" style="position:absolute;width:500px;height:20px;left:50%;bottom:0px;transform:translateX(-50%)"></input> 
         </form>
     </div>
 
-</div>
 
-<script src="
-https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
-<script>
-    var socket = io();
-    var WIDTH = 500;
-    var HEIGHT = 500;
+<script src='
+https://cdn.socket.io/4.8.1/socket.io.min.js'></script>
+<script type="module">
+    import {ClientInventory} from "/client/js/ClientInventory.js";
+    const socket = io();
+    let WIDTH = 500;
+    let HEIGHT = 500;
+    var Pack;
     //sign
-    var signDiv = document.getElementById("signDiv");
-    var signDivUsername = document.getElementById("signDiv-username");
-    var signDivSignIn = document.getElementById("signDiv-signIn");
-    var signDivSignUp = document.getElementById("signDiv-signUp");
-    var signDivPassword = document.getElementById("signDiv-password");
+    
+    const tileSize = 16;
+    const signDiv = document.getElementById("signDiv");
+    const signDivUsername = document.getElementById("signDiv-username");
+    const signDivSignIn = document.getElementById("signDiv-signIn");
+    const signDivSignUp = document.getElementById("signDiv-signUp");
+    const signDivPassword = document.getElementById("signDiv-password");
 
     signDivSignIn.onclick = function(){
         socket.emit("signIn", {username:signDivUsername.value,password:signDivPassword.value});
@@ -70,12 +73,11 @@ https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
         
     });
     //chat
-    var chatText = document.getElementById("chat-text");
-    var chatInput = document.getElementById("chat-input");
-    var chatForm = document.getElementById("chat-form");
+    const chatText = document.getElementById("chat-text");
+    const chatInput = document.getElementById("chat-input");
+    const chatForm = document.getElementById("chat-form");
     
-    var random=Math.random();
-
+    const random=Math.random();
 
 
     socket.on("addToChat",function(data){
@@ -88,7 +90,7 @@ https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
     chatForm.onsubmit = function(e){
         e.preventDefault();
         if(chatInput.value[0] === "/")
-            socket.emit("evalServer",chatInput.value.slice(1));
+            socket.emit("evalServer",chatInput.value);
         else if (chatInput.value[0] === "@"){
             socket.emit("sendPMsgToServer",{
                 username:chatInput.value.slice(1,chatInput.value.indexOf(',')),
@@ -100,89 +102,301 @@ https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
         }
         chatInput.value = "";
     }
+    chatInput.onkeydown = function(event) {
+        event.stopImmediatePropagation();
+    };
 
     //UI
     var changeMap = function(){
         socket.emit("changeMap");
     }
 
+    const changeMapButton = document.getElementById("changeMapButton");
+    changeMapButton.onclick = changeMap;
 
+    var inventory = new ClientInventory(socket);
+    socket.on("updateInventory",function(items){
+        inventory.items = items;
+        inventory.refreshRender();
+    })
 
 
     //game
     var Img = {};
     Img.player = new Image ();
-    Img.player.src = '/client/img/player.png';
+    Img.player.src = '/client/img/playerdefault.png';
     Img.bullet = new Image ();
     Img.bullet.src = '/client/img/bullet.png';
     Img.map = {};
     Img.map["forest"] = new Image ();
     Img.map['forest'].src = '/client/img/forest.png';
+    Img.map['beginnings'] = new Image();
+    Img.map['beginnings'].src = '/client/img/Beginnings.png';
     Img.map["desert"] = new Image ();
     Img.map['desert'].src = '/client/img/desert.png';
-    var ctx=document.getElementById("ctx").getContext("2d");
-    var ctxUi=document.getElementById("ctx-ui").getContext("2d");
-    ctxUi.font="30px Arial"
+    Img.slime = new Image ();
+    Img.slime.src = '/client/img/slime.png';
+    const canvas=document.getElementById("ctx");
+    const ctx=document.getElementById("ctx").getContext("2d");
+    ctx.font="30px Miniset"
 
     ctx.imageSmoothingEnabled = false;
 
-    
-    //init
-    var Player = function(initPack) {
-        var self = {};
-        self.id = initPack.id;
-        self.number = initPack.number;
-        self.x = initPack.x;
-        self.y = initPack.y;
-        self.hp = initPack.hp;
-        self.hpMax = initPack.hpMax;
-        self.score = initPack.score;
-        self.map = initPack.map;
+   
 
-        self.draw = function(){
-            if(Player.list[selfId].map != self.map)
+    let resizeCanvas = function(){
+        WIDTH = window.innerWidth;
+        HEIGHT = window.innerHeight;
+        canvas.width = WIDTH;
+        canvas.height = HEIGHT;
+        ctx.mozImageSmoothingEnabled = false;	//better graphics for pixel art
+        ctx.msImageSmoothingEnabled = false;
+        ctx.imageSmoothingEnabled = false;
+
+        canvas.style.width = '' + WIDTH + 'px';
+        canvas.style.height = '' + HEIGHT + 'px';
+    }
+    resizeCanvas();
+
+    window.addEventListener('resize',function(){
+    resizeCanvas();
+    });
+    //linear interpetration
+    var lerp = function(start,end,t){
+        return start * (1-t) + end*t;
+    }
+    //init
+    function animate(Img,x,y,width,height,scale,size,animationFrame,animationY){
+        let realSize = scale*size
+        let frameX = animationFrame * size;
+        let frameY = animationY *size;
+        console.log(x,y,width,height,scale,size,animationFrame,animationY)
+        ctx.drawImage(Img,frameX,frameY,size,size,x-width/2,y-height/2,realSize,realSize);
+    }
+    
+    class Player {
+        id;
+        number;
+        x;
+        y;
+        drawX;
+        drawY;
+        hp;
+        hpMax;
+        score;
+        map;
+        width;
+        height;
+        animation;
+        facing;
+        scale;
+        static list = [];
+
+        constructor(initPack){
+            this.id = initPack.id;
+            this.number = initPack.number;
+            this.x = initPack.x;
+            this.y = initPack.y;
+            this.drawX = initPack.x;
+            this.drawY = initPack.y;
+            this.hp = initPack.hp;
+            this.hpMax = initPack.hpMax;
+            this.score = initPack.score;
+            this.map = initPack.map;
+            this.width = initPack.width;
+            this.height = initPack.height;
+            this.animation = initPack.animation;
+            this.animationFrame = 0;
+            this.facing = initPack.facing;
+            this.scale=initPack.scale;
+            Player.list[this.id] = this;
+        }
+        draw(){
+            if(Player.list[selfId].map != this.map)
                 return;
-            var hpWidth = 30 * self.hp / self.hpMax;
-            var x = self.x - Player.list[selfId].x + WIDTH/2;
-            var y = self.y - Player.list[selfId].y + HEIGHT/2;
+
+            this.drawX = lerp(this.drawX, this.x, 0.2);
+            this.drawY = lerp(this.drawY, this.y, 0.2);
+            
+            var hpWidth = 30 * this.hp / this.hpMax;
+            var x = this.drawX - Player.list[selfId].drawX + WIDTH/2;
+            var y = this.drawY - Player.list[selfId].drawY + HEIGHT/2;
             ctx.fillStyle = "red";
             ctx.fillRect(x - hpWidth/2,y - 40,hpWidth,4);
             
             
-            var width = Img.player.width*4;
-            var height = Img.player.height*4;
+            var width = 16*this.scale;
+            var height = 16*this.scale;
             
-            ctx.drawImage(Img.player,0,0,Img.player.width,Img.player.height,x-width/2,y-height/2,width,height);
+            // ctx.drawImage(Img.player,0,0,Img.player.width,Img.player.height,x-width/2,y-height/2,width,height);
+            let animationY = 0;
+            let frames = 0;
+            let animationSpeed = 0;
+            if(this.animation.die === true){
+                animationY = 12;
+                frames = 3;
+                animationSpeed = 1/15
+            }
+            else if(this.animation.hurt === true){
+                animationY = 8;
+                frames = 2
+                animationSpeed = 1/15
+            }
+            else if(this.animation.walk === true){
+                animationY = 4;
+                frames = 4;
+                animationSpeed = 1/10
+            }
+            else {
+                animationY = 0;
+                frames = 2;
+                animationSpeed = 1/30
+            }
+            if(this.facing === "north"){
+                animationY = animationY +3;    
+            }
+            else if(this.facing === "south"){
+                animationY = animationY;
+            }
+            else if(this.facing === 'east'){
+                animationY = animationY + 1;
+            }
+            else if(this.facing === 'west'){
+                animationY = animationY + 2;
+            }
+            this.animationFrame += animationSpeed;
+            this.animationFrame %= frames;
+            animate(Img.player,x,y,width,height,this.scale,16,Math.floor(this.animationFrame),animationY);
+            // ctx.drawImage(Img.player,0, 0, 16, 16,x-width/2,y-height/2,width,height);
+            
+            //collision
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 1;
+            var collisionX = x - this.width/2;
+            var collisionY = y - this.height/2;
+            ctx.strokeRect(collisionX,collisionY, this.width, this.height);
+            ctx.fillRect(x,y,10,10);
+
         }
-
-        Player.list[self.id] = self;
-        return self;
-    }
-    Player.list = {};
-
-
-    var Bullet = function(initPack) {
-        var self = {};
-        self.id = initPack.id;
-        self.number = initPack.number;
-        self.x = initPack.x;
-        self.y = initPack.y;
-        self.map = initPack.map;
         
-            
-        self.draw = function(){
-            if(Player.list[selfId].map != self.map)
-                return;
-            var width = Img.bullet.width*1.5;
-            var height = Img.bullet.height*1.5;
-            var x = self.x - Player.list[selfId].x + WIDTH/2;
-            var y = self.y - Player.list[selfId].y + HEIGHT/2;
-            ctx.drawImage(Img.bullet,0,0,Img.bullet.width,Img.bullet.height,x-width/2,y-height/2, width,height);
-        }
-        Bullet.list[self.id] = self;
-        return self;
+        
     }
-    Bullet.list = {};
+    class Bullet {
+        id;
+        number;
+        x;
+        y;
+        drawX;
+        drawY;
+        map;
+        width;
+        height;
+        animation;
+
+        static list = [];
+
+        constructor(initPack){
+            this.id = initPack.id;
+            this.number = initPack.number;
+            this.x = initPack.x;
+            this.y = initPack.y;
+            this.drawX = initPack.x;
+            this.drawY = initPack.y;
+            this.map = initPack.map;
+            this.width = initPack.width;
+            this.height = initPack.height;
+            this.animation = initPack.animation;
+            this.animationFrame = 0;
+            Bullet.list[this.id] = this;
+        }
+        draw(){
+            
+            if(Player.list[selfId].map != this.map)
+                return;
+            let width = Img.bullet.width*1.5;
+            let height = Img.bullet.height*1.5;
+            this.drawX = lerp(this.drawX, this.x,0.2);
+            this.drawY = lerp(this.drawY, this.y,0.2);
+            let x = this.x - Player.list[selfId].drawX + WIDTH/2;
+            let y = this.y - Player.list[selfId].drawY + HEIGHT/2;
+            ctx.drawImage(Img.bullet,0,0,Img.bullet.width,Img.bullet.height,x-width/2,y - height/2, width,height);
+
+            //collision
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 1;
+            var collisionX = x - this.width/2;
+            var collisionY = y - this.height/2;
+            ctx.strokeRect(collisionX,collisionY, this.width, this.height);
+        }
+    }
+    class Monster {
+        static list = [];
+        constructor(initPack){
+            this.id = initPack.id;
+            this.x = initPack.x;
+            this.y = initPack.y;
+            this.hp = initPack.hp;
+            this.hpMax = initPack.hpMax;
+            this.map = initPack.map;
+            this.width = initPack.width;
+            this.height = initPack.height;
+            this.animation = initPack.animation;
+            this.facing = initPack.facing;
+            this.type = initPack.type;
+            this.animationFrame = 0;
+            this.monsterType = initPack.monsterType;
+            this.scale = 4;
+            
+            Monster.list[this.id] = this;
+        }
+        draw(){
+
+            if(Player.list[selfId].map != this.map)
+                return;
+            let animationY = 0;
+            let frames = 0;
+            let animationSpeed = 0;
+            
+            this.drawX = lerp(this.drawX, this.x,0.2);
+            this.drawY = lerp(this.drawY, this.y,0.2);
+            let x = this.x - Player.list[selfId].drawX + WIDTH/2;
+            let y = this.y - Player.list[selfId].drawY + HEIGHT/2;
+            let offsetY = 0;
+            if(this.monsterType === "slime"){
+                var width = 64;
+                var height = 32;
+                offsetY = 32;
+                if(this.animation.heal === true){
+                    animationY = 2;
+                    frames = 13;
+                    animationSpeed = 1/4
+                }
+                else if(this.animation.attack === true){
+                    animationY = 1;
+                    frames = 6;
+                    animationSpeed = 1/5;
+                }
+                else if(this.animation.idle === true){
+                    animationY = 0;
+                    frames = 4;
+                    animationSpeed = 1/15
+                }
+                
+            }
+            this.animationFrame += animationSpeed;
+            this.animationFrame %= frames;
+            animate(Img.slime,x,y-offsetY,width,height,this.scale,16,Math.floor(this.animationFrame),animationY);
+
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 1;
+            var collisionX = x - width/2;
+            var collisionY = y - height/2;
+            ctx.strokeRect(collisionX,collisionY, width, height);
+            ctx.fillRect(x,y,5,5);
+        }
+    }
+
+   
 
 
     var selfId = null;
@@ -197,10 +411,12 @@ https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
         for (var i = 0; i < data.bullet.length; i++){
             new Bullet(data.bullet[i]);
         }
+        for (var i = 0; i < data.monster.length; i++){
+            new Monster(data.monster[i]);
+        }
     });
     //update
     socket.on("update",function(data){
-        
         for(var i = 0; i < data.bullet.length; i++) {
             var pack = data.bullet[i];
             var b = Bullet.list[pack.id];
@@ -209,6 +425,8 @@ https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
                     b.x = pack.x;
                 if(pack.y !== undefined)
                     b.y = pack.y;
+                if(pack.animation !== undefined)
+                    b.animation = pack.animation;
             }
         }
         for(var i = 0; i < data.player.length; i++) {
@@ -225,6 +443,29 @@ https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
                     p.score = pack.score;
                 if(pack.map !== undefined)
                     p.map = pack.map;
+                if(pack.animation !== undefined)
+                    p.animation = pack.animation;
+                if(pack.facing !== undefined)
+                    p.facing = pack.facing;
+            }
+            
+        }
+        for(var i = 0; i < data.monster.length; i++) {
+            var pack = data.monster[i];
+            var p = Monster.list[pack.id];
+            if(p) {
+                if(pack.x !== undefined)
+                    p.x = pack.x;
+                if(pack.y !== undefined)
+                    p.y = pack.y;
+                if(pack.hp !== undefined)
+                    p.hp = pack.hp;
+                if(pack.map !== undefined)
+                    p.map = pack.map;
+                if(pack.animation !== undefined)
+                    p.animation = pack.animation;
+                if(pack.facing !== undefined)
+                    p.facing = pack.facing;
             }
             
         }
@@ -239,13 +480,16 @@ https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
         for (var i = 0; i < data.bullet.length; i++){
             delete Bullet.list[data.bullet[i]];
         }
+        for (var i = 0; i < data.monster.length; i++){
+            delete Monster.list[data.monster[i]];
+        }
     })
     //loop (drawing)
 
-    setInterval(function(){
+    function drawAll() {
         if(!selfId)
             return
-        ctx.clearRect(0,0,500,500);
+        ctx.clearRect(0,0,WIDTH,HEIGHT);
         drawMap();
         for(var i in Player.list){
             Player.list[i].draw();
@@ -253,29 +497,53 @@ https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
         for(var i in Bullet.list) {
             Bullet.list[i].draw();
         }
+        for(var i in Monster.list) {
+            Monster.list[i].draw();
+        }
         drawScore();
-            
-    },40);
+        drawFps();
+    };
     var drawMap = function(){
         var player = Player.list[selfId];
-        var width = Img.map[player.map].width*6;
-        var height = Img.map[player.map].height*6;
-        var x = WIDTH/2 - Player.list[selfId].x;
-        var y = HEIGHT/2 - Player.list[selfId].y;
+        var width = Img.map[player.map].width*4;
+        var height = Img.map[player.map].height*4;
+        var x = WIDTH/2 - Player.list[selfId].drawX;
+        var y = HEIGHT/2 - Player.list[selfId].drawY;
         ctx.drawImage(Img.map[player.map],x,y,width,height);
     }
-    
+   
     var drawScore = function(){
-        if(lastScore === Player.list[selfId].score)
-            return;
-        lastScore = Player.list[selfId].score;
-        ctxUi.clearRect(0,0,500,500)
-        ctxUi.textAlign = "center";
-        ctxUi.textBaseline = "middle";
-        ctxUi.fillStyle = "black";
-        ctxUi.fontWeight = "700";
-        ctxUi.font = "50px Arial";
-        ctxUi.fillText(Player.list[selfId].score,30,30)
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "black";
+        ctx.fontWeight = "700";
+        ctx.font = "40px Miniset";
+        ctx.fillText(Player.list[selfId].score,30,30)
+    }
+    
+    const times = [];
+    let fps;
+    function fpsfinder(){
+        const now = performance.now();
+        while (times.length > 0 && times[0] <= now - 1000) {
+            times.shift();
+        }
+        times.push(now);
+        fps = times.length;
+    }
+    function refreshLoop() {
+        fpsfinder();
+        drawAll();
+        window.requestAnimationFrame(refreshLoop);
+    }
+    window.requestAnimationFrame(refreshLoop);
+    var drawFps = function(){
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "red";
+        ctx.fontWeight = "700";
+        ctx.font = "20px Miniset";
+        ctx.fillText(fps,30,60)
     }
     var lastScore = null
     document.onkeydown = function(event) {
@@ -306,7 +574,7 @@ https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
     }
 
 
-    document.onmousedown = function(event){
+    canvas.onmousedown = function(event){
         if(gameDiv.style.display === "none"){
             return;
         }
@@ -333,8 +601,8 @@ https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
         // }
         // var selfX = self.x - Player.list[selfId].x + WIDTH/2;
         // var selfY = self.y - Player.list[selfId].y + HEIGHT/2;
-        var x = -250 + event.clientX - 8;
-        var y = -250 + event.clientY - 8;
+        var x = -WIDTH/2 + event.clientX - 8;
+        var y = -HEIGHT/2 + event.clientY - 8;
         var angle = Math.atan2(y,x) / Math.PI * 180;
         socket.emit("keyPress",{inputId:"mouseAngle",state:angle});
     }
