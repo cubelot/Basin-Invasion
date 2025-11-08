@@ -20,6 +20,8 @@ class Entity {
         this.y=250;
         this.spdX=0;
         this.spdY=0;
+        this.spd = 1;
+        this.maxSpd = 5;
         this.id= Math.random();
         this.map="beginnings";
         this.type="entity";
@@ -40,8 +42,26 @@ class Entity {
         this.updatePosition();
     }
     updatePosition() {
+        this.spdX = this.spdX * this.spd;
+        this.spdY = this.spdY * this.spd;
+        let oldX = this.x;
         this.x += this.spdX;
+        if(checkMap(this.x,this.y, this.width, this.height,this.map) === false){
+            this.x = oldX;
+            if(this.type === "bullet"){
+                this.toRemove = true;
+            }
+        }
+        let oldY = this.y;
         this.y += this.spdY;
+        if(checkMap(this.x,this.y, this.width, this.height,this.map) === false){
+            this.y = oldY;
+            if(this.type === "bullet"){
+                this.toRemove = true;
+            }
+        }
+        this.spdX = this.spdX/this.spd;
+        this.spdY = this.spdY/this.spd;
     }
     getDistance (pt) {
         return Math.sqrt(Math.pow(this.x-pt.x,2) + Math.pow(this.y-pt.y,2));
@@ -80,13 +100,20 @@ class Player extends Entity{
         this.pressingAttack = false;
         this.mouseAngle = 0;
         this.maxSpd = 10;
-        this.bulletNumber = 2;
-        this.hp = 10;
-        this.hpMax = 10;
+        this.bulletNumber = 1;
+        this.hp = 11231231230;
+        this.hpMax = 10123123123;
         this.score = 0;
         this.cooldown = 0;
-        this.width = 40;
-        this.height = 60;
+        this.width = 32;
+        this.height = 56;
+        this.status = "alive";
+        this.aniStats = {
+            y:0,
+            frames:0,
+            spd:0,
+            current:0,
+        }
         this.type = "player";
         this.animation = {
             idle:true,
@@ -95,8 +122,10 @@ class Player extends Entity{
             die:false,
         }
         this.scale = 4;
-        this.facing = "south";
+        this.facing = "down";
+        this.immunityFrame = 20;
         this.inventory = new ServerInventory(param.progress.items,param.socket);
+        this.direction = "south";
         
         Player.list[this.id] = this;
         
@@ -107,20 +136,97 @@ class Player extends Entity{
     
     update() {
         for (var i = 0; i < this.maxSpd; i++) {
-            
-        this.updateSpd();
-        this.updatePosition();
+            this.updateSpd();
+            this.updatePosition();
+            this.updateAnimations();
         }
-
+        if(this.status === "dead"){
+            this.immunityFrame = 100;
+        }
+        if(this.status === "hurt")
+            this.immunityFrame = 100;
         if(this.pressingAttack && this.cooldown <= 0){
-            for(var i = -((this.bulletNumber)/2); i < ((this.bulletNumber)/2); i++){
-                this.shootBullet(i * 10 + this.mouseAngle);
-            }
-            this.cooldown = 10;   
+            this.shootBullet(this.mouseAngle);
+            // for(var i = -((this.bulletNumber)/2); i < ((this.bulletNumber)/2); i++){
+            //     this.shootBullet(i * 10 + this.mouseAngle);
+            // }
+            this.cooldown = 20;   
         }
         else {
             this.cooldown--;
-        }   
+        }
+        if(this.immunityFrame > 0){
+            this.immunityFrame--;
+        }
+        
+    }
+    updateAnimations(){
+        console.log(this.status)
+        if(this.animation.die === true){
+            this.status = "dead";
+        }
+        else if (this.animation.hurt === true){
+            if (this.status != "hurt") {
+                this.aniStats.current = 0;
+            }
+            this.status = "hurt";
+        }
+        if(this.animation.die === true){
+            this.aniStats.y = 12;
+            this.aniStats.frames = 5;
+            this.aniStats.spd = 1/30;
+        }
+        else if(this.animation.hurt === true){
+            this.aniStats.y = 8;
+            this.aniStats.frames = 2;
+            this.aniStats.spd = 1/30;
+        }
+        else if(this.animation.walk === true){
+            this.aniStats.y = 4;
+            this.aniStats.frames = 4;
+            this.aniStats.spd = 1/30;
+        }
+        else {
+            this.aniStats.y = 0;
+            this.aniStats.frames = 2;
+            this.aniStats.spd = 1/60;
+        }
+        if(this.facing === "up"){
+            this.aniStats.y += 3;
+        }
+        else if(this.facing === "down"){
+            this.aniStats.y += 0;
+        }
+        else if(this.facing === 'right'){
+            this.aniStats.y += 1;
+        }
+        else if(this.facing === 'left'){
+            this.aniStats.y += 2;
+        }
+        
+        this.aniStats.current += this.aniStats.spd;
+        if(this.aniStats.current >= this.aniStats.frames){
+            if(this.status === "dead" || this.animation.die === true){
+                this.status = "alive";
+                this.x = 500;
+                this.y = 250;
+                this.hp = this.hpMax;
+                this.score--;
+                this.immunityFrame = 20;
+                this.animation.die = false;
+            }
+            if(this.status === "hurt" || this.animation.hurt === true){
+                this.status = "alive";
+                this.immunityFrame = 10;
+                this.animation.hurt = false;
+            }
+            
+        }
+        this.aniStats.current %= this.aniStats.frames;
+        console.log(this.aniStats)
+        // console.log(this.aniStats)
+        // console.log(this.animation)
+        
     }
     shootBullet(angle){
         if(Math.random() < 0.4)
@@ -135,50 +241,85 @@ class Player extends Entity{
         b.x = this.x;
         b.y = this.y;
     }
-    updatePosition() {
-        let oldX = this.x;
-        this.x += this.spdX;
-        if(checkMap(this.x,this.y, this.width, this.height,this.map) === false){
-            this.x = oldX;
-        }
-        let oldY = this.y;
-        this.y += this.spdY;
-        if(checkMap(this.x,this.y, this.width, this.height,this.map) === false){
-            this.y = oldY;
-        }
-    }
+    // updatePosition() {
+    //     let oldX = this.x;
+    //     this.x += this.spdX;
+    //     if(checkMap(this.x,this.y, this.width, this.height,this.map) === false){
+    //         this.x = oldX;
+    //     }
+    //     let oldY = this.y;
+    //     this.y += this.spdY;
+    //     if(checkMap(this.x,this.y, this.width, this.height,this.map) === false){
+    //         this.y = oldY;
+    //     }
+    // }
     updateSpd(){
-        this.animation.walk=false;
+        this.spdX = 0;
+        this.spdY = 0;
         this.animation.idle = false;
-        this.animation.die = false;
-        this.animation.hurt = false;
+        this.animation.walk = false;
+        var currentRight = this.pressingRight;
+        var currentLeft = this.pressingLeft;
+        var currentUp = this.pressingUp;
+        var currentDown = this.pressingDown;
         
-        if(this.pressingUp){
-            this.spdY = -1;
-            this.animation.walk = true;
-            this.facing = "north";
+        if(currentRight && currentLeft){
+            currentRight = false;
+            currentLeft = false;
         }
-        else if(this.pressingDown){
-            this.spdY = 1;
-            this.animation.walk = true;
-            this.facing = "south";
+        if(currentUp && currentDown){
+            currentUp = false;
+            currentDown = false;
         }
-        else 
-            this.spdY = 0;
-        if(this.pressingRight){
-                this.spdX = 1;
-                this.animation.walk = true;
-                this.facing = "east";
+        if(currentUp){
+            this.animation.walk = true;
+            this.facing = "up"
+            if(currentRight){
+                this.spdY = -0.7071;
+                this.spdX = 0.7071;
             }
-        else if(this.pressingLeft){
-                this.spdX = -1;
-                this.animation.walk = true;
-                this.facing = "west";
+            else if(currentLeft){
+                this.spdY = -0.7071;
+                this.spdX = -0.7071;
             }
-        else
-            this.spdX = 0;
-        if(this.spdX && this.spdY == 0)
+            else {
+                this.spdY = -1;
+            }
+        }
+        else if(currentDown){
+            this.facing = "down";
+            this.animation.walk = true;
+            if(currentRight){
+                this.spdY = 0.7071;
+                this.spdX = 0.7071;
+            }
+            else if(currentLeft){
+                this.spdY = 0.7071;
+                this.spdX = -0.7071;
+            }
+            else {
+                this.spdY = 1;
+            }
+        }
+        else if(currentRight){
+            this.animation.walk = true;
+            this.spdX = 1;
+            this.facing = "right"
+        }
+        else if(currentLeft){
+            this.animation.walk = true;
+            this.spdX = -1;
+            this.facing = "left"
+        }
+        if (this.spdX && this.spdY == 0){
             this.animation.idle = true;
+        }
+        if(this.status === "hurt" || this.status === "dead"){
+            this.spdX = 0;
+            this.spdY = 0;
+        }
+        this.spdX = this.spdX * this.spd;
+        this.spdY = this.spdY * this.spd;
     }
     
 
@@ -198,6 +339,8 @@ class Player extends Entity{
             facing:this.facing,
             scale:this.scale,
             type:this.type,
+            aniStats:this.aniStats,
+            status:this.status,
         }
     }
 
@@ -211,6 +354,8 @@ class Player extends Entity{
             map:this.map,
             animation:this.animation,
             facing:this.facing,
+            aniStats:this.aniStats,
+            status:this.status,
         }
     }
     static onConnect(socket,username,progress){
@@ -320,7 +465,6 @@ class Bullet extends Entity{
     static list = [];
     constructor(param){
         super(param);
-        console.log(this.id)
         this.angle = param.angle;
         this.spdX = Math.cos(param.angle/180*Math.PI) * 10;
         this.spdY = Math.sin(param.angle/180*Math.PI) * 10;
@@ -333,7 +477,6 @@ class Bullet extends Entity{
         this.animation = {
             none: true,
         }
-        console.log(this.id)
         // var super_update = this.update;
         Bullet.list[this.id] = this;
         
@@ -352,14 +495,30 @@ class Bullet extends Entity{
             if(this.map == p.map && checkCollision(this,p) && this.parent !== p.id) {
                 //handle collision
                 p.hp -= 1;
-                
+                p.animation.hurt = true;
                 if(p.hp <= 0) {
+                    p.animation.die = true;
                     let shooter = Player.list[this.parent];
                     if(shooter)
                         shooter.score += 1;
-                    p.hp = p.hpMax;
-                    p.x = Math.random()*500;
-                    p.y = Math.random()*500;
+                }
+                this.toRemove = true;
+            }
+            
+        }
+        for(var i in Monster.list){
+            
+            let m = Monster.list[i]
+            
+            if(this.map == m.map && checkCollision(this,m)) {
+                //handle collision
+                m.hp -= 1;
+                
+                if(m.hp <= 0) {
+                    let shooter = Player.list[this.parent];
+                    if(shooter)
+                        shooter.score += 1;
+                    m.toRemove = true;
                 }
                 this.toRemove = true;
             }
@@ -435,7 +594,7 @@ class Actor extends Entity {
             die:false,
         }
         this.type = "actor";
-        this.facing = "south";
+        this.facing = "down";
         this.height;
         this.width;
         this.name = "Actor";
@@ -459,14 +618,127 @@ class Monster extends Actor {
         this.spdX = param.spdX;
         this.spdY = param.spdY;
         this.map = param.map;
+        this.spd = param.spd;
+        this.toRemove = false;
+        this.maxSpd = 5;
         Monster.list[this.id] = this;
 
 
         initPack.monster.push(this.getInitPack());
     }
     update(){
+        for(var i = 0; i<this.maxSpd;i++){
+            this.updateSpd();
+            this.updatePosition();
+            
+        }
         if(this.hp <= 0)
             this.toRemove = true;
+        for(var i in Player.list){
+            
+            let p = Player.list[i]
+            
+            if(this.map === p.map && checkCollision(this,p)) {
+                //handle collision
+                if(p.immunityFrame === 0){
+                    p.hp -= 1;
+                    p.animation.hurt = true;
+                    if(p.hp <= 0) {
+                        p.animation.die = true;
+                    }
+                }
+            }
+            
+        }
+    }
+    
+    updateSpd(){
+        for(var i in this.animation){
+            this.animation[i] = false;
+        }
+        let current=0;
+        let min=0;
+        let closestId=null;
+        for(var i in Player.list){
+            if(Player.list[i].map === this.map){
+                current = this.getDistance(Player.list[i]);
+                if (closestId == null) {
+                    closestId = i;
+                    min = current;
+                }
+                else if(Math.min(current,min) === current){
+                    closestId = i;
+                    min = Math.min(current,min);
+                }
+            }
+            
+        }
+        if (closestId == null) {
+            return;
+        }
+        if(min > 320){
+            this.spdX = 0;
+            this.spdY = 0;
+            this.animation.idle = true;
+            return;
+        }
+        let player = Player.list[closestId];
+        if(player.x > this.x){
+            this.animation.walk = true;
+            if(player.y > this.y){
+                this.spdX = 0.7071;
+                this.spdY = 0.7071;
+                this.facing = "down";
+            }
+            else if(player.y < this.y){
+                this.spdX = 0.7071;
+                this.spdY = -0.7071;
+                this.facing = "up";
+            }
+            else {
+                this.spdX = 1;
+                this.spdY = 0;
+                this.facing = "right";
+            }
+        }
+        if(player.x < this.x){
+            this.animation.walk = true;
+            if(player.y > this.y){
+                this.spdX = -0.7071;
+                this.spdY = 0.7071;
+                this.facing = "down"
+            }
+            else if(player.y < this.y){
+                this.spdX = -0.7071;
+                this.spdY = -0.7071;
+                this.facing = "up";
+            }
+            else {
+                this.spdX = -1;
+                this.spdY = 0;
+                this.facing = "left";
+            }
+        }
+        if(player.x === this.x){
+            this.animation.walk = true;
+            this.spdX = 0;
+            if(player.y > this.y){
+                this.spdY = 1;
+                this.facing = "down";
+            }
+            else if(player.y < this.y){
+                this.spdY = -1;
+                this.facing = "up";
+            }
+            else {
+                this.spdY = 0;
+                this.animation.idle = true;
+            }
+        }
+        this.spdX = this.spdX * this.spd;
+        this.spdY = this.spdY * this.spd;
+
+        
         
     }
     getInitPack(){
@@ -515,7 +787,7 @@ class Monster extends Actor {
             }
             else 
                 pack.push(monster.getUpdatePack());
-            }
+        }
         return pack;
     }
     static summonMonster(monsterType,x,y,map){
@@ -534,6 +806,7 @@ class Monster extends Actor {
             monsterType:monsterType,
             map:monster.map,
             type:type,
+            spd:monster.spd,
         }
         if(map)
             summoningData.map = map;

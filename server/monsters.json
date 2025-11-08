@@ -16,7 +16,8 @@
             "hpMax":5,
             "height":8,
             "width":16,
-            "name":"Slime"
+            "name":"Slime",
+            "spd":0.75
         }
     }
 }

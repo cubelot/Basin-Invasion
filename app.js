@@ -55,7 +55,9 @@ io.sockets.on("connection", function(socket) {
     socket.id=Math.random();
     
     SOCKET_LIST[socket.id] = socket;
-    
+    socket.on('animation finished', function(data){
+            this.animation = data;
+     });
 
     socket.on("signIn",function(data){
         Database.isValidPassword(data,function(res){
