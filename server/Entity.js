@@ -161,7 +161,6 @@ class Player extends Entity{
         
     }
     updateAnimations(){
-        console.log(this.status)
         if(this.animation.die === true){
             this.status = "dead";
         }
@@ -223,7 +222,6 @@ class Player extends Entity{
             
         }
         this.aniStats.current %= this.aniStats.frames;
-        console.log(this.aniStats)
         // console.log(this.aniStats)
         // console.log(this.animation)
         
@@ -599,6 +597,8 @@ class Actor extends Entity {
         this.width;
         this.name = "Actor";
         this.toSummon = false;
+        this.attack = "idle";
+        this.attackLength;
         
     }
 }
@@ -621,16 +621,32 @@ class Monster extends Actor {
         this.spd = param.spd;
         this.toRemove = false;
         this.maxSpd = 5;
+        this.aniStats = {
+            current:0,
+            frames:0,
+            y:0,
+            spd:0,
+        }
+        this.offsetY = param.offsetY;
+        this.attackType = param.attackType;
+        this.attacks = param.attacks;
+        this.attackNumber = 0;
+        this.attackLength = param.attackLength;
+        this.status = "alive";
         Monster.list[this.id] = this;
+
+        console.log(this.x, this.spdX)
 
 
         initPack.monster.push(this.getInitPack());
     }
     update(){
+        
         for(var i = 0; i<this.maxSpd;i++){
+            this.updateAttack();
             this.updateSpd();
             this.updatePosition();
-            
+            this.updateAnimations();
         }
         if(this.hp <= 0)
             this.toRemove = true;
@@ -651,10 +667,65 @@ class Monster extends Actor {
             
         }
     }
-    
-    updateSpd(){
+    updateAnimations(){
+        if(this.monsterType === "slime"){
+            if(this.animation.heal === true){
+                this.aniStats.y = 2;
+                this.aniStats.frames = 13;
+                this.aniStats.spd = 1/16;
+            }
+            else if(this.animation.walk === true){
+                this.aniStats.y = 1;
+                this.aniStats.frames = 6;
+                this.aniStats.spd = 1/8;
+            }
+            else if(this.animation.idle === true){
+                this.aniStats.y = 0;
+                this.aniStats.frames = 4;
+                this.aniStats.spd = 1/12;
+            }
+        }
+        this.aniStats.current += this.aniStats.spd;
+        if(this.aniStats.current >= this.aniStats.frames){
+            this.attackNumber++;
+            this.attackNumber %= this.attacks.length;
+        }
+        this.aniStats.current %= this.aniStats.frames;
+        console.log(this.aniStats)
+        console.log(this.animation)
+        
+        this.attackNumber %= this.attackLength;
+    }
+    updateAttack(){
         for(var i in this.animation){
             this.animation[i] = false;
+        }
+        this.status = "idle"
+        
+        for(var i in this.attacks){
+            if(this.attackNumber === parseInt(i)){
+                if(this.attacks[i] === "heal"){
+                    this.hp += Math.floor(this.hpMax * 0.5);
+                    if(this.hp > this.hpMax)
+                        this.hp = this.hpMax
+                    this.animation.heal = true;
+                }
+                if(this.attacks[i] === "move"){
+                    this.status = "move"
+                    this.animation.walk = true;
+                }
+                if(this.attacks[i] === "idle"){
+                    this.animation.idle = true;
+                }
+            }
+        }
+    }
+    updateSpd(){
+        console.log(this.status)
+        this.spdX = 0;
+        this.spdY = 0;
+        if(this.status !== "move" && this.attackType !== "constantMove"){
+            return;
         }
         let current=0;
         let min=0;
@@ -676,6 +747,7 @@ class Monster extends Actor {
         if (closestId == null) {
             return;
         }
+        
         if(min > 320){
             this.spdX = 0;
             this.spdY = 0;
@@ -737,8 +809,6 @@ class Monster extends Actor {
         }
         this.spdX = this.spdX * this.spd;
         this.spdY = this.spdY * this.spd;
-
-        
         
     }
     getInitPack(){
@@ -755,6 +825,11 @@ class Monster extends Actor {
             facing:this.facing,
             type:this.type,
             monsterType:this.monsterType,
+            aniStats:this.aniStats,
+            attackType:this.attackType,
+            attacks:this.attacks,
+            attackLength:this.attackLength,
+            offsetY:this.offsetY,
         }
     }
 
@@ -766,6 +841,8 @@ class Monster extends Actor {
             hp:this.hp,
             animation:this.animation,
             facing:this.facing,
+            aniStats:this.aniStats,
+            status:this.status,
         }
     }
     static getAllInitPack(){
@@ -807,6 +884,12 @@ class Monster extends Actor {
             map:monster.map,
             type:type,
             spd:monster.spd,
+            spdX:0,
+            spdY:0,
+            attackType:monster.attackType,
+            attacks:monster.attacks,
+            attackLength:Object.keys(monster.attacks).length,
+            offsetY:monster.offsetY,
         }
         if(map)
             summoningData.map = map;

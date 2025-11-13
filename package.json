@@ -1,14 +1,14 @@
 {
-  "name": "monster_invasion",
+  "name": "basin_invasion",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "app.js",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "node api/index.js",
-    "start": "node api/index.js",
-    "build": ""
+    "dev": "node api/app.js",
+    "start": "node api/app.js",
+    "build": "echo 'No build step required'"
   },
   "author": "",
   "license": "ISC",
@@ -16,5 +16,8 @@
     "express": "^5.1.0",
     "mongojs": "^3.1.0",
     "socket.io": "^4.8.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

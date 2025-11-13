@@ -18,22 +18,23 @@ app.get("/", function(req, res) {
     res.sendFile(__dirname + "/client/index.html");
 });
 app.use("/client",express.static(__dirname + "/client"));
-
-serv.listen(2000);
+const port = 2000;
+const hostname = "0.0.0.0"
+serv.listen(port, hostname);
 console.log("server started");
 
 var SOCKET_LIST = {};
 
 var checkCollision = function(rect1, rect2) {
   
-    const rect1Right = rect1.x + rect1.width;
-    const rect1Bottom = rect1.y + rect1.height;
-    const rect2Right = rect2.x + rect2.width;
-    const rect2Bottom = rect2.y + rect2.height;
+    const rect1Right = rect1.x + rect1.width/2;
+    const rect1Bottom = rect1.y + rect1.height/2;
+    const rect2Right = rect2.x + rect2.width/2;
+    const rect2Bottom = rect2.y + rect2.height/2;
     
-    const xOverlap = rect1Right > rect2.x && rect1.x < rect2Right;
+    const xOverlap = rect1Right > rect2.x - rect2.width/2 && rect1.x - rect1.width/2< rect2Right;
 
-    const yOverlap = rect1Bottom > rect2.y && rect1.y < rect2Bottom;
+    const yOverlap = rect1Bottom > rect2.y - rect2.height/2 && rect1.y - rect2.height/2< rect2Bottom;
     if(xOverlap && yOverlap == true){
         return true;
     }

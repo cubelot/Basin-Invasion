@@ -2,6 +2,7 @@ import {ClientInventory} from "/client/js/ClientInventory.js";
 const socket = io();
 let WIDTH = 500;
 let HEIGHT = 500;
+const SCALE = 4;
 var Pack;
 //sign
 
@@ -329,6 +330,8 @@ class Bullet {
         var collisionX = x - this.width/2;
         var collisionY = y - this.height/2;
         ctx.strokeRect(collisionX,collisionY, this.width, this.height);
+        ctx.fillStyle = "black"
+        ctx.fillRect(x,y,5,5);
     }
 }
 class Monster {
@@ -345,8 +348,9 @@ class Monster {
         this.animation = initPack.animation;
         this.facing = initPack.facing;
         this.type = initPack.type;
-        this.animationFrame = 0;
+        this.aniStats = initPack.aniStats;
         this.monsterType = initPack.monsterType;
+        this.offsetY = initPack.offsetY;
         this.drawX = initPack.x;
         this.drawY = initPack.y;
         this.scale = 4;
@@ -356,49 +360,26 @@ class Monster {
     draw(){
         if(Player.list[selfId].map != this.map)
             return;
-        let animationY = 0;
-        let frames = 0;
-        let animationSpeed = 0;
+        
         
         this.drawX = lerp(this.drawX, this.x,0.2);
         this.drawY = lerp(this.drawY, this.y,0.2);
         let x = this.drawX;
         let y = this.drawY;
-        let offsetY = 0;
+
         var hpWidth = 30 * this.hp / this.hpMax;
         
         ctx.fillStyle = "red";
         ctx.fillRect(x - hpWidth/2,y - 40,hpWidth,4);
-        if(this.monsterType === "slime"){
-            var width = 64;
-            var height = 32;
-            offsetY = 32;
-            if(this.animation.heal === true){
-                animationY = 2;
-                frames = 13;
-                animationSpeed = 1/4
-            }
-            else if(this.animation.walk === true){
-                animationY = 1;
-                frames = 6;
-                animationSpeed = 1/5;
-            }
-            else if(this.animation.idle === true){
-                animationY = 0;
-                frames = 4;
-                animationSpeed = 1/3;
-            }
-            
-        }
-        this.animationFrame += animationSpeed;
-        this.animationFrame %= frames;
-        animate(Img.slime,x,y-offsetY,width,height,this.scale,16,Math.floor(this.animationFrame),animationY);
+        console.log(this.animation)
+        console.log(this.aniStats)
+        animate(Img.slime,x,y-this.offsetY,this.width,this.height,this.scale,16,Math.floor(this.aniStats.current),this.aniStats.y);
 
         ctx.strokeStyle = 'red';
         ctx.lineWidth = 1;
-        var collisionX = x - width/2;
-        var collisionY = y - height/2;
-        ctx.strokeRect(collisionX,collisionY, width, height);
+        var collisionX = x - this.width/2;
+        var collisionY = y - this.height/2;
+        ctx.strokeRect(collisionX,collisionY, this.width, this.height);
         ctx.fillRect(x,y,5,5);
     }
 }
@@ -479,6 +460,10 @@ socket.on("update",function(data){
                 p.animation = pack.animation;
             if(pack.facing !== undefined)
                 p.facing = pack.facing;
+            if(pack.aniStats !== undefined)
+                p.aniStats = pack.aniStats;
+            if(pack.status !== undefined)
+                p.status = pack.status;
         }
         
     }

@@ -14,10 +14,22 @@
             },
             "hp":5,
             "hpMax":5,
-            "height":8,
-            "width":16,
+            "height":32,
+            "width":64,
             "name":"Slime",
-            "spd":0.75
+            "spd":1.55,
+            "attacks":[
+                "idle",
+                "idle",
+                "idle",
+                "move",
+                "idle",
+                "move",
+                "move",
+                "heal"
+            ],
+            "attackType":"jumpMove",
+            "offsetY":32
         }
     }
 }
