@@ -2,8 +2,8 @@ const USE_DB = true
 
 import mongojs from "mongojs";
 // var mongojs = require("mongojs");
-const db = USE_DB ? mongojs("127.0.0.1:27017/myGame", ["account","progress"]) : null;
-
+// const db = USE_DB ? mongojs("127.0.0.1:27017/myGame", ["account","progress"]) : null;
+const db = USE_DB ? mongojs("mongodb+srv://cubelot:lotcubed@basin-invasion.mqmasj9.mongodb.net/myGame", ["account","progress"]) : null;
 db.account.insertOne({username:"b",password:"bb"});
 var Database = {};
 Database.isValidPassword = function(data,cb){
